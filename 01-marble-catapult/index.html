@@ -465,6 +465,11 @@ let colorCounts = {};
 // every color name ever obtained, kept even after merging its duplicates
 // away to 0 — this is what "owned" means for the swatch row and the count
 let discoveredColors = new Set();
+// every color name that has ever actually been merged into a Power Marble —
+// separate from discoveredColors because owning a color isn't the same as
+// having merged it, and the crate should only lock once every color has
+// gone through a real merge, not just been pulled once
+let mergedColors = new Set();
 
 // ---- shiny variants: same 7 colors, a rare foil version for bragging rights ----
 const SHINY_CHANCE = 0.01; // 1-in-100 per crate
@@ -531,11 +536,12 @@ function hasAnyMergeablePair() {
   return Object.values(colorCounts).some((count) => count >= 2);
 }
 
-// the crate's job is done once every color has been found and every
-// duplicate that ever came from one has been merged into a Power Marble —
-// nothing left for a crate to give you at that point
+// the crate's job is done once every color has been found AND every color
+// has gone through an actual merge into a Power Marble — owning one of
+// each isn't enough, otherwise a lucky no-duplicate streak locks the crate
+// before you ever get to merge anything
 function collectionComplete() {
-  return discoveredColors.size === MARBLE_COLORS.length && !hasAnyMergeablePair();
+  return discoveredColors.size === MARBLE_COLORS.length && mergedColors.size === MARBLE_COLORS.length;
 }
 
 // the one place marbleColor changes — keeps the ball, the shop icon, and
@@ -637,6 +643,7 @@ function mergeMarbles() {
   if (!colorToMerge) return;
   colorCounts[colorToMerge] -= 2;
   if (colorCounts[colorToMerge] === 0) delete colorCounts[colorToMerge];
+  mergedColors.add(colorToMerge);
   poweredMarbleCount++;
   flashReveal(`⚡ Merged 2 ${colorToMerge} into a Power Marble!`);
   updateShopUI();
@@ -792,7 +799,8 @@ function saveGame() {
     levelNum, roundNum, totalMoney, nextPayout, lifetimeEarnings, arenaUnlocked, trailUnlocked,
     marbleColor, marbleIsShiny, colorCounts, poweredMarbleCount,
     discoveredColors: Array.from(discoveredColors),
-    discoveredShinyColors: Array.from(discoveredShinyColors)
+    discoveredShinyColors: Array.from(discoveredShinyColors),
+    mergedColors: Array.from(mergedColors)
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -821,6 +829,9 @@ function loadGame() {
     // in colorCounts so those players don't lose their collected swatches
     discoveredColors = new Set(data.discoveredColors ?? Object.keys(colorCounts));
     discoveredShinyColors = new Set(data.discoveredShinyColors ?? []);
+    // older saves predate merge tracking — start empty rather than guessing,
+    // so existing players just need to merge whatever colors they haven't yet
+    mergedColors = new Set(data.mergedColors ?? []);
     displayedMoney = totalMoney; // don't animate in a big jump right on load
   } catch (e) {
     // a corrupted save shouldn't crash the game — just start fresh
