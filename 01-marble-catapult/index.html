@@ -347,18 +347,20 @@ function spawnConfetti(x, y) {
 }
 
 // a cosmetic ember trail behind the marble in flight, unlocked at
-// TRAIL_GOAL lifetime earnings — small, short-lived so it reads as sparks
-// falling away rather than a full burst
+// TRAIL_GOAL lifetime earnings — big, dense, and lingering so it reads as a
+// real fire trail rather than a sparse handful of dots
 function spawnTrailSpark(x, y) {
-  const colors = ["#ff9d3d", "#ff5a36", "#ffd166"];
-  particles.push({
-    x, y,
-    vx: (Math.random() - 0.5) * 40,
-    vy: (Math.random() - 0.5) * 40,
-    life: 0.4,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    size: 2 + Math.random() * 2.5
-  });
+  const colors = ["#ff9d3d", "#ff5a36", "#ffd166", "#ff3d1f"];
+  for (let i = 0; i < 3; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 60,
+      vy: (Math.random() - 0.5) * 60,
+      life: 0.6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 6 + Math.random() * 6
+    });
+  }
 }
 
 // a distinct electric-yellow burst so a Power Marble push feels like it
@@ -466,6 +468,7 @@ let discoveredColors = new Set();
 
 // ---- shiny variants: same 7 colors, a rare foil version for bragging rights ----
 const SHINY_CHANCE = 0.01; // 1-in-100 per crate
+const MAX_SHINY_MARBLES = 3; // once you've found this many, no more roll shiny — a small finite collectible, not a 13-color grind
 let discoveredShinyColors = new Set(); // color names found in shiny form at least once
 let marbleIsShiny = false; // is the currently-equipped marble the shiny version?
 
@@ -613,7 +616,7 @@ function openCrate() {
   totalMoney -= CRATE_PRICE;
   const picked = pickRandomColor();
   const isNew = !discoveredColors.has(picked.name);
-  const isShiny = Math.random() < SHINY_CHANCE;
+  const isShiny = discoveredShinyColors.size < MAX_SHINY_MARBLES && Math.random() < SHINY_CHANCE;
   const isNewShiny = isShiny && !discoveredShinyColors.has(picked.name);
   colorCounts[picked.name] = (colorCounts[picked.name] || 0) + 1;
   discoveredColors.add(picked.name);
@@ -1313,9 +1316,14 @@ function stepFlight(now) {
       );
       if (blockingGlove) {
         if (poweredMarbleCount > 0) {
-          // a Power Marble shoves every glove aside for this shot — it keeps flying
+          // a Power Marble shoves the glove aside AND locks the rest of the
+          // shot onto the rim — otherwise a shove that still misses the hoop
+          // just looks like "got blocked anyway" to a kid watching for it
           poweredMarbleCount--;
           gloveShovedThisShot = true;
+          const guided = guaranteedShotFrom(marbleX, marbleY);
+          flightVx = guided.vx;
+          flightVy = guided.vy;
           message = "⚡ PUSHED BACK!";
           spawnPowerBurst(blockingGlove.x, blockingGlove.y);
           squashPulse = 1;
