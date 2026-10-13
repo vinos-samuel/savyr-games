@@ -78,7 +78,16 @@ Number folders in build order so it reads like a portfolio over time.
 
 All 7 changes verified directly (function calls + forced RNG/state, not visual playtesting) since automated tabs throttle `requestAnimationFrame` — see testing note below.
 
-**Next:** possibly moving GitHub/Vercel deploy so Savyr can share a link with friends (in progress); after that, marble powers beyond the single push-back and an ending/win-state decision (still undecided per the Game Card).
+**Deploy session — GitHub + Vercel setup:**
+- Repo initialized at the `Games/` root (`.gitignore` excludes `.DS_Store`), first commit made, pushed to a new **private** GitHub repo: `vinos-samuel/savyr-games`.
+- Decided against the `deploy_to_vercel` MCP tool (one-shot file upload, no ongoing sync) in favor of Vercel's GitHub integration — matches the existing "push to GitHub, Vercel auto-deploys" pattern already documented in Vinos's global CLAUDE.md, and means every future `git push` redeploys automatically instead of going stale after one snapshot.
+- Local `vercel` CLI token was expired and reauth needs an interactive browser/email step Claude can't complete — connecting the repo has to happen once in the Vercel dashboard directly.
+- Gave Vinos the exact steps: import `vinos-samuel/savyr-games` at vercel.com/new, set **Root Directory** to `01-marble-catapult` (so the game loads at the bare URL, not a subpath), deploy.
+- Domain decision: skip a custom domain for now, use the free `*.vercel.app` URL — no cost, no registrar step.
+
+**Where we stopped:** waiting on Vinos to do the one manual step (Vercel dashboard import) since it's an account/OAuth action Claude shouldn't do on his behalf. Not yet confirmed live.
+
+**Next:** get the live `*.vercel.app` URL from Vinos and verify the deployed game loads correctly; then marble powers beyond the single push-back and an ending/win-state decision (still undecided per the Game Card).
 
 **Architecture decisions worth remembering:**
 - Collision checks must use segment-crossing tests (prev position → current position), not point-in-region tests — the backboard shipped with the latter first and a fast ball tunneled straight through it before the fix.
